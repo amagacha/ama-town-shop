@@ -7,19 +7,17 @@
 
 <style>
 
-body{font-family:sans-serif;margin:0;background:white;}
+body{
+  font-family:sans-serif;
+  margin:0;
+  background:white;
+}
 
 header{
   background:#2c6e49;
   color:white;
   text-align:center;
   padding:25px;
-}
-
-.version{
-  text-align:center;
-  font-size:14px;
-  color:#666;
 }
 
 /* 👀 サイト閲覧数 */
@@ -30,13 +28,31 @@ header{
   background:#f5f5f5;
 }
 
+/* 🔍 検索 */
+.search-box{
+  max-width:900px;
+  margin:20px auto;
+  padding:0 20px;
+}
+
+.search-box input{
+  width:100%;
+  padding:12px;
+  font-size:18px;
+  border-radius:8px;
+  border:1px solid #ccc;
+}
+
+/* 📦 コンテンツ */
 .container{
   max-width:900px;
   margin:auto;
   padding:20px;
 }
 
-.shop{margin-bottom:60px;}
+.shop{
+  margin-bottom:60px;
+}
 
 .photo img{
   width:100%;
@@ -50,18 +66,40 @@ header{
   border-radius:12px;
 }
 
+/* 🆕 バージョン表示（右上固定） */
+.version-badge{
+  position:fixed;
+  top:10px;
+  right:10px;
+  background:#2c6e49;
+  color:white;
+  padding:6px 10px;
+  border-radius:8px;
+  font-size:13px;
+  font-weight:bold;
+  box-shadow:0 2px 6px rgba(0,0,0,0.2);
+  z-index:100;
+}
+
 </style>
 </head>
 
 <body>
 
+<!-- 🆕 バージョン -->
+<div class="version-badge">V3.5.1</div>
+
 <header>
 <h1>海士町 商店紹介</h1>
-<div class="version">V3.5</div>
 </header>
 
-<!-- 👇 ここ追加 -->
+<!-- 👀 サイト閲覧 -->
 <div class="site-view" id="siteView"></div>
+
+<!-- 🔍 検索 -->
+<div class="search-box">
+<input id="search" placeholder="検索（漢字・ひらがなOK）">
+</div>
 
 <div id="shopList" class="container"></div>
 
@@ -75,41 +113,46 @@ let totalViews=parseInt(localStorage.getItem("siteViews")||"0");
 let todayData=JSON.parse(localStorage.getItem("siteToday")||"{}");
 let sessionFlag=sessionStorage.getItem("visited");
 
-/* 今日の日付 */
 const today=new Date().toISOString().slice(0,10);
 
-/* 日付チェック */
 if(todayData.date!==today){
-todayData={date:today,count:0};
+  todayData={date:today,count:0};
 }
 
-/* カウント（初回のみ） */
 if(!sessionFlag){
-totalViews++;
-todayData.count++;
+  totalViews++;
+  todayData.count++;
 
-localStorage.setItem("siteViews",totalViews);
-localStorage.setItem("siteToday",JSON.stringify(todayData));
-sessionStorage.setItem("visited","true");
+  localStorage.setItem("siteViews",totalViews);
+  localStorage.setItem("siteToday",JSON.stringify(todayData));
+  sessionStorage.setItem("visited","true");
 }
 
-/* 表示 */
 document.getElementById("siteView").innerHTML=
-`👀 総閲覧数：${totalViews}回　｜　📅 今日：${todayData.count}回`;
+`👀 総閲覧数：${totalViews}回 ｜ 📅 今日：${todayData.count}回`;
 
 /* データ取得 */
+let allShops=[];
+
 fetch(API_URL,{
-headers:{"X-MICROCMS-API-KEY":API_KEY}
+  headers:{"X-MICROCMS-API-KEY":API_KEY}
 })
 .then(r=>r.json())
 .then(data=>{
-render(data.contents);
+  allShops=data.contents;
+  render(allShops);
 });
 
+/* 表示 */
 function render(list){
 
 const el=document.getElementById("shopList");
 el.innerHTML="";
+
+if(list.length===0){
+  el.innerHTML="<p>店がまだ登録されていません</p>";
+  return;
+}
 
 list.forEach(s=>{
 
@@ -135,6 +178,27 @@ el.innerHTML+=`
 });
 
 }
+
+/* 🔍 検索 */
+document.getElementById("search").addEventListener("input",function(){
+
+const key=this.value.toLowerCase();
+
+const filtered=allShops.filter(s=>{
+
+const name=(s.name||"").toLowerCase();
+
+const kanas=Object.keys(s)
+.filter(k=>k.startsWith("kana"))
+.map(k=>(s[k]||"").toLowerCase());
+
+return name.includes(key)||kanas.some(k=>k.includes(key));
+
+});
+
+render(filtered);
+
+});
 
 </script>
 
